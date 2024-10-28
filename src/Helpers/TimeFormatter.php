@@ -19,6 +19,8 @@ class TimeFormatter
      */
     public static function formatDuration($seconds)
     {
+        $seconds = abs($seconds);
+
         if ($seconds < 60) {
             return $seconds . "s";
         } elseif ($seconds < 3600) {

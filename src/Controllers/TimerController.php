@@ -22,48 +22,60 @@ class TimerController extends BaseController
         if (!$task) {
             if ($this->isAjaxRequest()) {
                 $this->json(['error' => 'Task not found']);
+            } else {
+                Session::setFlash('error', 'Task not found');
+                $this->redirect('/dashboard');
             }
-            Session::setFlash('error', 'Task not found');
-            $this->redirect('/dashboard');
+            return;
         }
 
         // Start the timer
         if ($this->timer->startTimer($taskId, Auth::user()['id'])) {
+            // Always set flash message regardless of request type
+            Session::setFlash('success', 'Timer started successfully');
+
             if ($this->isAjaxRequest()) {
                 $this->json([
                     'success' => true,
                     'message' => 'Timer started successfully'
                 ]);
+            } else {
+                $this->redirect("/projects/{$task['project_id']}/tasks");
             }
-            Session::setFlash('success', 'Timer started successfully');
-            $this->redirect("/projects/{$task['project_id']}/tasks");
-        }
+        } else {
+            Session::setFlash('error', 'Could not start timer');
 
-        if ($this->isAjaxRequest()) {
-            $this->json(['error' => 'Could not start timer']);
+            if ($this->isAjaxRequest()) {
+                $this->json(['error' => 'Could not start timer']);
+            } else {
+                $this->redirect("/projects/{$task['project_id']}/tasks");
+            }
         }
-        Session::setFlash('error', 'Could not start timer');
-        $this->redirect("/projects/{$task['project_id']}/tasks");
     }
 
     public function stop($timerId)
     {
         if ($this->timer->stopTimer($timerId)) {
+            // Always set flash message regardless of request type
+            Session::setFlash('success', 'Timer stopped successfully');
+
             if ($this->isAjaxRequest()) {
                 $this->json([
                     'success' => true,
                     'message' => 'Timer stopped successfully'
                 ]);
+            } else {
+                $this->redirect($_SERVER['HTTP_REFERER'] ?? '/dashboard');
             }
-            Session::setFlash('success', 'Timer stopped successfully');
-            $this->redirect($_SERVER['HTTP_REFERER'] ?? '/dashboard');
-        }
+        } else {
+            Session::setFlash('error', 'Could not stop timer');
 
-        if ($this->isAjaxRequest()) {
-            $this->json(['error' => 'Could not stop timer']);
+            if ($this->isAjaxRequest()) {
+                $this->json(['error' => 'Could not stop timer']);
+            } else {
+                $this->redirect('/dashboard');
+            }
         }
-        Session::setFlash('error', 'Could not stop timer');
-        $this->redirect('/dashboard');
     }
 
     public function current()

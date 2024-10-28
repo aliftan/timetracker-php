@@ -87,8 +87,7 @@
                             <td class="px-6 py-4 text-sm text-gray-500">
                                 <div class="flex flex-col">
                                     <span>Total: <?php echo TimeFormatter::formatDuration($task['tracked_seconds']); ?></span>
-                                    <span>Est: <?php echo TimeFormatter::formatDuration($task['estimated_time'] * 60); // Convert minutes to seconds 
-                                                ?></span>
+                                    <span>Est: <?php echo TimeFormatter::formatDuration($task['estimated_time'] * 60); ?></span>
                                 </div>
                             </td>
 
@@ -176,7 +175,6 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Refresh the page or show a success message
                     window.location.reload();
                 } else {
                     alert(data.error || 'Could not start timer');
@@ -188,6 +186,26 @@
             });
     }
 
+    function stopTimer() {
+        fetch(`/timetracker-php/timer/${timerId}/stop`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert(data.error || 'Could not stop timer');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Could not stop timer');
+            });
+    }
 
     function deleteTask(taskId) {
         if (!confirm('Are you sure you want to delete this task?')) {

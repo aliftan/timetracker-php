@@ -35,6 +35,7 @@
     function showTimer(timer) {
         document.getElementById('timer-widget').classList.remove('hidden');
         document.getElementById('current-task').textContent = timer.task_name;
+        // Server sends time in GMT+8, so we can use it directly
         startTime = new Date(timer.start_time);
         timerId = timer.id;
 
@@ -53,8 +54,11 @@
 
     function updateDisplay() {
         const now = new Date();
-        const diff = Math.floor((now - startTime) / 1000);
+        // Convert GMT+8 timestamp to Date object and adjust for GMT+8
+        const start = new Date(startTime);
+        const diff = Math.floor((now - start) / 1000);
 
+        // Calculate hours, minutes, seconds without timezone offset
         const hours = Math.floor(diff / 3600);
         const minutes = Math.floor((diff % 3600) / 60);
         const seconds = diff % 60;

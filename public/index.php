@@ -9,6 +9,9 @@ ini_set('display_errors', 1);
 // Load configuration
 $config = require_once __DIR__ . '/../config/config.php';
 
+// Set timezone
+date_default_timezone_set($config['timezone']);
+
 // Autoload classes
 spl_autoload_register(function ($class) {
     // Check in Helpers
