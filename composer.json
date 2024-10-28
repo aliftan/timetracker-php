@@ -1,0 +1,13 @@
+{
+    "name": "alifio/timetracker",
+    "description": "Time tracking application",
+    "type": "project",
+    "autoload": {
+        "classmap": [
+            "src/"
+        ]
+    },
+    "require": {
+        "php": ">=8.1"
+    }
+}
