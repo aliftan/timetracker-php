@@ -51,22 +51,22 @@ switch ($request) {
             require __DIR__ . '/../views/welcome.php';
         }
         break;
-        
+
     case 'login':
         $controller = new UserController();
         $controller->login();
         break;
-        
+
     case 'register':
         $controller = new UserController();
         $controller->register();
         break;
-        
+
     case 'logout':
         $controller = new UserController();
         $controller->logout();
         break;
-        
+
     case 'dashboard':
         if (!Auth::check()) {
             header("Location: {$basePath}/login");
@@ -74,7 +74,42 @@ switch ($request) {
         }
         require __DIR__ . '/../views/dashboard/index.php';
         break;
-        
+
+    case 'projects':
+        $controller = new ProjectController();
+        $controller->index();
+        break;
+
+    case 'projects/create':
+        $controller = new ProjectController();
+        $controller->create();
+        break;
+
+    case (preg_match('/^projects\/(\d+)\/edit$/', $request, $matches) ? true : false):
+        $controller = new ProjectController();
+        $controller->edit($matches[1]);
+        break;
+
+    case (preg_match('/^projects\/(\d+)\/tasks$/', $request, $matches) ? true : false):
+        $controller = new TaskController();
+        $controller->index($matches[1]);
+        break;
+
+    case (preg_match('/^tasks\/(\d+)\/timer\/start$/', $request, $matches) ? true : false):
+        $controller = new TimerController();
+        $controller->start($matches[1]);
+        break;
+
+    case (preg_match('/^timer\/(\d+)\/stop$/', $request, $matches) ? true : false):
+        $controller = new TimerController();
+        $controller->stop($matches[1]);
+        break;
+
+    case 'timer/current':
+        $controller = new TimerController();
+        $controller->current();
+        break;
+
     default:
         http_response_code(404);
         require __DIR__ . '/../views/404.php';

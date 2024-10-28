@@ -1,0 +1,9 @@
+input:focus, textarea:focus, button:focus {
+    outline: none;
+}
+
+/* Custom focus styles */
+.form-input:focus-within, .form-textarea:focus-within {
+    border-color: rgb(59, 130, 246);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}

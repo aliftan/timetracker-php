@@ -73,4 +73,24 @@ class Project
         }
         return $projects;
     }
+
+    public function getProjectStats($userId) {
+        $sql = "
+            SELECT 
+                COUNT(*) as total_projects,
+                SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active_projects
+            FROM projects
+            WHERE user_id = :user_id
+        ";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
+        $result = $stmt->execute();
+        $stats = $result->fetchArray(SQLITE3_ASSOC);
+        
+        return [
+            'total_projects' => $stats['total_projects'] ?? 0,
+            'active_projects' => $stats['active_projects'] ?? 0
+        ];
+    }
 }

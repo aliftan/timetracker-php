@@ -32,6 +32,7 @@ class ProjectController extends BaseController {
                 ];
                 
                 if ($this->project->create($data)) {
+                    Session::setFlash('success', 'Project created successfully!');
                     $this->redirect('/projects');
                 }
             }
@@ -50,6 +51,7 @@ class ProjectController extends BaseController {
         $project = $this->project->find($id);
         
         if (!$project || $project['user_id'] !== Auth::user()['id']) {
+            Session::setFlash('error', 'Project not found');
             $this->redirect('/projects');
         }
         
@@ -65,6 +67,7 @@ class ProjectController extends BaseController {
                 ];
                 
                 if ($this->project->update($id, $data)) {
+                    Session::setFlash('success', 'Project updated successfully!');
                     $this->redirect('/projects');
                 }
             }
@@ -82,3 +85,24 @@ class ProjectController extends BaseController {
             'project' => $project
         ]);
     }
+
+    /**
+     * Delete a project
+     */
+    public function delete($id) {
+        $project = $this->project->find($id);
+        
+        if (!$project || $project['user_id'] !== Auth::user()['id']) {
+            Session::setFlash('error', 'Project not found');
+            $this->redirect('/projects');
+        }
+        
+        if ($this->project->delete($id)) {
+            Session::setFlash('success', 'Project deleted successfully!');
+        } else {
+            Session::setFlash('error', 'Failed to delete project');
+        }
+        
+        $this->redirect('/projects');
+    }
+}

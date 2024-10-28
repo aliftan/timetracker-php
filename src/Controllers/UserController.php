@@ -15,15 +15,27 @@ class UserController extends BaseController
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $email = $_POST['email'] ?? '';
-            $password = $_POST['password'] ?? '';
+            $validator = new Validator($_POST);
+            $validator->required('email')->email('email')
+                ->required('password');
 
-            if (Auth::login($email, $password)) {
-                $this->redirect('/dashboard');
+            if (!$validator->hasErrors()) {
+                $email = $_POST['email'];
+                $password = $_POST['password'];
+
+                if (Auth::login($email, $password)) {
+                    Session::setFlash('success', 'Welcome back!');
+                    $this->redirect('/dashboard');
+                } else {
+                    Session::setFlash('error', 'Invalid credentials');
+                    $this->view('auth/login', [
+                        'email' => $email
+                    ]);
+                }
             } else {
                 $this->view('auth/login', [
-                    'error' => 'Invalid credentials',
-                    'email' => $email
+                    'errors' => $validator->getErrors(),
+                    'email' => $_POST['email'] ?? ''
                 ]);
             }
         }
@@ -40,7 +52,7 @@ class UserController extends BaseController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $validator = new Validator($_POST);
             $validator->required('username')
-                ->required('email')->email('email')
+                ->required('email')->email('email')->unique('email', 'users', 'Email is already registered')
                 ->required('password')->min('password', 6);
 
             if (!$validator->hasErrors()) {
@@ -52,10 +64,11 @@ class UserController extends BaseController
 
                 if ($this->user->create($data)) {
                     Auth::login($data['email'], $data['password']);
+                    Session::setFlash('success', 'Welcome to TimeTracker! Your account has been created.');
                     $this->redirect('/dashboard');
                 } else {
+                    Session::setFlash('error', 'Registration failed. Please try again.');
                     $this->view('auth/register', [
-                        'error' => 'Registration failed',
                         'data' => $data
                     ]);
                 }
@@ -73,6 +86,7 @@ class UserController extends BaseController
     public function logout()
     {
         Auth::logout();
+        Session::setFlash('info', 'You have been logged out successfully');
         $this->redirect('/login');
     }
 }
