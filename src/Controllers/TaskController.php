@@ -171,35 +171,41 @@ class TaskController extends BaseController
 
     public function delete($taskId)
     {
+        // Check if it's a POST request
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->json(['error' => 'Invalid request method']);
             return;
         }
 
+        // Find the task
         $task = $this->task->find($taskId);
         if (!$task) {
             $this->json(['error' => 'Task not found']);
             return;
         }
 
+        // Check authorization
         $project = $this->project->find($task['project_id']);
         if (!$project || $project['user_id'] !== Auth::user()['id']) {
             $this->json(['error' => 'Unauthorized']);
             return;
         }
 
+        // Delete and handle response
         if ($this->task->delete($taskId)) {
+            Session::setFlash('success', 'Task deleted successfully');
+
             if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
                 $this->json(['success' => true]);
             } else {
-                Session::setFlash('success', 'Task deleted successfully');
                 $this->redirect("/projects/{$project['id']}/tasks");
             }
         } else {
+            Session::setFlash('error', 'Failed to delete task');
+
             if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
                 $this->json(['error' => 'Failed to delete task']);
             } else {
-                Session::setFlash('error', 'Failed to delete task');
                 $this->redirect("/projects/{$project['id']}/tasks");
             }
         }

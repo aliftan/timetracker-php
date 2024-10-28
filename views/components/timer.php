@@ -1,4 +1,3 @@
-# views/components/timer.php
 <div id="timer-widget" class="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg border p-4 hidden">
     <div class="flex items-center space-x-4">
         <div>

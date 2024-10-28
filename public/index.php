@@ -114,6 +114,12 @@ switch ($request) {
         $controller->updateStatus($matches[1]);
         break;
 
+        // For task deletion
+    case (preg_match('/^tasks\/(\d+)\/delete$/', $request, $matches) ? true : false):
+        $controller = new TaskController();
+        $controller->delete($matches[1]);
+        break;
+
     case (preg_match('/^tasks\/(\d+)\/timer\/start$/', $request, $matches) ? true : false):
         $controller = new TimerController();
         $controller->start($matches[1]);

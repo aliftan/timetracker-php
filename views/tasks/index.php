@@ -190,7 +190,7 @@
 
 
     function deleteTask(taskId) {
-        if (!confirm('Are you sure you want to delete this task? This will also delete all associated timers.')) {
+        if (!confirm('Are you sure you want to delete this task?')) {
             return;
         }
 
@@ -203,11 +203,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Remove the task row and its history row from the DOM
-                    const taskRow = document.querySelector(`tr:has(button[onclick="deleteTask(${taskId})"])`);
-                    const historyRow = document.getElementById(`timer-history-${taskId}`);
-                    if (taskRow) taskRow.remove();
-                    if (historyRow) historyRow.remove();
+                    window.location.reload();
                 } else {
                     alert(data.error || 'Could not delete task');
                 }

@@ -162,10 +162,10 @@ class Task
 
     public function delete($id)
     {
-        // Start transaction
-        $this->db->exec('BEGIN');
-
         try {
+            // Start transaction
+            $this->db->query('BEGIN TRANSACTION');
+
             // Delete associated timers first
             $stmt = $this->db->prepare('DELETE FROM timers WHERE task_id = :task_id');
             $stmt->bindValue(':task_id', $id, SQLITE3_INTEGER);
@@ -177,11 +177,11 @@ class Task
             $stmt->execute();
 
             // Commit transaction
-            $this->db->exec('COMMIT');
+            $this->db->query('COMMIT');
             return true;
         } catch (Exception $e) {
             // Rollback on error
-            $this->db->exec('ROLLBACK');
+            $this->db->query('ROLLBACK');
             return false;
         }
     }
