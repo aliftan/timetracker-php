@@ -93,6 +93,11 @@ switch ($request) {
         $controller->edit($matches[1]);
         break;
 
+    case (preg_match('/^projects\/(\d+)\/delete$/', $request, $matches) ? true : false):
+        $controller = new ProjectController();
+        $controller->delete($matches[1]);
+        break;
+
         // For task listing within a project
     case (preg_match('/^projects\/(\d+)\/tasks$/', $request, $matches) ? true : false):
         $controller = new TaskController();

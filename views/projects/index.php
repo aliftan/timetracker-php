@@ -41,6 +41,10 @@
                                 class="text-sm text-gray-600 hover:text-gray-800">
                                 Edit
                             </a>
+                            <button onclick="deleteProject(<?php echo $project['id']; ?>)"
+                                class="text-sm text-red-600 hover:text-red-800">
+                                Delete
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -56,3 +60,30 @@
         <?php endif; ?>
     </div>
 </div>
+
+<script>
+    function deleteProject(projectId) {
+        if (!confirm('Are you sure you want to delete this project? This will also delete all associated tasks and timers.')) {
+            return;
+        }
+
+        fetch(`/timetracker-php/projects/${projectId}/delete`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert(data.error || 'Could not delete project');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Could not delete project');
+            });
+    }
+</script>

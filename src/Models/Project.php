@@ -48,11 +48,42 @@ class Project
         return $stmt->execute();
     }
 
+    public function delete($id)
+    {
+        $this->db->query('BEGIN TRANSACTION');
+
+        try {
+            // First delete associated timers
+            $stmt = $this->db->prepare('
+            DELETE FROM timers 
+            WHERE task_id IN (SELECT id FROM tasks WHERE project_id = :project_id)
+        ');
+            $stmt->bindValue(':project_id', $id, SQLITE3_INTEGER);
+            $stmt->execute();
+
+            // Then delete associated tasks
+            $stmt = $this->db->prepare('DELETE FROM tasks WHERE project_id = :project_id');
+            $stmt->bindValue(':project_id', $id, SQLITE3_INTEGER);
+            $stmt->execute();
+
+            // Finally delete the project
+            $stmt = $this->db->prepare('DELETE FROM projects WHERE id = :id');
+            $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
+            $stmt->execute();
+
+            $this->db->query('COMMIT');
+            return true;
+        } catch (Exception $e) {
+            $this->db->query('ROLLBACK');
+            return false;
+        }
+    }
+
     public function getUserProjects($userId, $limit = null)
     {
         $sql = 'SELECT p.*, 
-                       COUNT(t.id) as task_count,
-                       SUM(CASE WHEN t.status = "completed" THEN 1 ELSE 0 END) as completed_tasks
+                    COUNT(t.id) as task_count,
+                    SUM(CASE WHEN t.status = "completed" THEN 1 ELSE 0 END) as completed_tasks
                 FROM projects p
                 LEFT JOIN tasks t ON p.id = t.project_id
                 WHERE p.user_id = :user_id
@@ -74,7 +105,8 @@ class Project
         return $projects;
     }
 
-    public function getProjectStats($userId) {
+    public function getProjectStats($userId)
+    {
         $sql = "
             SELECT 
                 COUNT(*) as total_projects,
@@ -82,12 +114,12 @@ class Project
             FROM projects
             WHERE user_id = :user_id
         ";
-        
+
         $stmt = $this->db->prepare($sql);
         $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
         $result = $stmt->execute();
         $stats = $result->fetchArray(SQLITE3_ASSOC);
-        
+
         return [
             'total_projects' => $stats['total_projects'] ?? 0,
             'active_projects' => $stats['active_projects'] ?? 0
