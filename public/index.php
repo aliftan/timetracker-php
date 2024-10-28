@@ -90,9 +90,28 @@ switch ($request) {
         $controller->edit($matches[1]);
         break;
 
+        // For task listing within a project
     case (preg_match('/^projects\/(\d+)\/tasks$/', $request, $matches) ? true : false):
         $controller = new TaskController();
         $controller->index($matches[1]);
+        break;
+
+        // For task creation
+    case (preg_match('/^projects\/(\d+)\/tasks\/create$/', $request, $matches) ? true : false):
+        $controller = new TaskController();
+        $controller->create($matches[1]);
+        break;
+
+        // For task editing - matches both /tasks/1/edit and /projects/1/tasks/1/edit
+    case (preg_match('/^(?:projects\/\d+\/)?tasks\/(\d+)\/edit$/', $request, $matches) ? true : false):
+        $controller = new TaskController();
+        $controller->edit($matches[1]);
+        break;
+
+        // For task status updates
+    case (preg_match('/^tasks\/(\d+)\/status$/', $request, $matches) ? true : false):
+        $controller = new TaskController();
+        $controller->updateStatus($matches[1]);
         break;
 
     case (preg_match('/^tasks\/(\d+)\/timer\/start$/', $request, $matches) ? true : false):

@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     project_id INTEGER,
     name TEXT NOT NULL,
     description TEXT,
-    estimated_hours REAL,
+    estimated_time INTEGER NOT NULL,
     status TEXT DEFAULT 'pending',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (project_id) REFERENCES projects(id)

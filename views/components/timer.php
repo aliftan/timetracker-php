@@ -1,4 +1,5 @@
-<div id="timer-widget" class="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg border p-4" style="display: none;">
+# views/components/timer.php
+<div id="timer-widget" class="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg border p-4 hidden">
     <div class="flex items-center space-x-4">
         <div>
             <div class="text-sm text-gray-600">Current Task:</div>
@@ -8,9 +9,8 @@
             <div class="text-sm text-gray-600">Time:</div>
             <div id="timer-display" class="font-medium">00:00:00</div>
         </div>
-        <button id="stop-timer"
-            class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-            onclick="stopTimer()">
+        <button onclick="stopTimer()"
+            class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors">
             Stop
         </button>
     </div>
@@ -34,7 +34,7 @@
     }
 
     function showTimer(timer) {
-        document.getElementById('timer-widget').style.display = 'block';
+        document.getElementById('timer-widget').classList.remove('hidden');
         document.getElementById('current-task').textContent = timer.task_name;
         startTime = new Date(timer.start_time);
         timerId = timer.id;
@@ -45,7 +45,7 @@
     }
 
     function hideTimer() {
-        document.getElementById('timer-widget').style.display = 'none';
+        document.getElementById('timer-widget').classList.add('hidden');
         if (timerInterval) {
             clearInterval(timerInterval);
             timerInterval = null;
@@ -75,6 +75,9 @@
             .then(data => {
                 if (data.success) {
                     hideTimer();
+                    window.location.reload();
+                } else {
+                    alert(data.error || 'Could not stop timer');
                 }
             });
     }

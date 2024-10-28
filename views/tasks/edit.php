@@ -1,55 +1,72 @@
-<div class="max-w-2xl mx-auto">
-    <div class="bg-white rounded-lg shadow-sm border p-6">
-        <h1 class="text-2xl font-bold text-gray-900 mb-6">
-            Edit Task
-        </h1>
+<div class="max-w-3xl mx-auto px-4 py-8">
+    <div class="bg-white rounded-lg shadow-md border p-8">
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">Edit Task</h1>
+            <p class="mt-2 text-gray-600">Update task details and progress</p>
+        </div>
 
-        <?php if (!empty($errors)): ?>
-            <div class="bg-red-50 text-red-800 p-4 rounded-lg mb-6">
-                <ul class="list-disc list-inside">
-                    <?php foreach ($errors as $error): ?>
-                        <li><?php echo htmlspecialchars($error); ?></li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-        <?php endif; ?>
-
-        <form method="POST" class="space-y-6">
-            <div>
-                <label for="name" class="block text-sm font-medium text-gray-700">
-                    Task Name
+        <form method="POST" class="space-y-8">
+            <!-- Task Name -->
+            <div class="space-y-2">
+                <label for="name" class="block text-sm font-semibold text-gray-700">
+                    Task Name <span class="text-red-500">*</span>
                 </label>
                 <input type="text" id="name" name="name"
                     value="<?php echo htmlspecialchars($task['name']); ?>"
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    class="block w-full px-4 py-3 text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                    placeholder="Enter task name"
                     required>
+                <p class="text-sm text-gray-500">Choose a clear, actionable name for your task.</p>
             </div>
 
-            <div>
-                <label for="description" class="block text-sm font-medium text-gray-700">
+            <!-- Description -->
+            <div class="space-y-2">
+                <label for="description" class="block text-sm font-semibold text-gray-700">
                     Description
                 </label>
-                <textarea id="description" name="description" rows="3"
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"><?php echo htmlspecialchars($task['description'] ?? ''); ?></textarea>
+                <textarea id="description" name="description" rows="4"
+                    class="block w-full px-4 py-3 text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                    placeholder="Describe what needs to be done"><?php echo htmlspecialchars($task['description'] ?? ''); ?></textarea>
+                <p class="text-sm text-gray-500">Add any details or instructions for this task.</p>
             </div>
 
-            <div>
-                <label for="estimated_hours" class="block text-sm font-medium text-gray-700">
-                    Estimated Hours
+            <!-- Estimated Time -->
+            <div class="space-y-2">
+                <label class="block text-sm font-semibold text-gray-700">
+                    Estimated Time <span class="text-red-500">*</span>
                 </label>
-                <input type="number" id="estimated_hours" name="estimated_hours"
-                    value="<?php echo htmlspecialchars($task['estimated_hours']); ?>"
-                    min="0.1" step="0.1"
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    required>
+                <div class="flex space-x-4">
+                    <div class="flex-1">
+                        <input type="number"
+                            id="estimated_time"
+                            name="estimated_time"
+                            value="<?php
+                                    // If time is more than 60 minutes, show in hours
+                                    echo $task['estimated_time'] >= 60
+                                        ? $task['estimated_time'] / 60
+                                        : $task['estimated_time'];
+                                    ?>"
+                            min="1"
+                            step="1"
+                            class="block w-full px-4 py-3 text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                            required>
+                    </div>
+                    <select name="time_unit"
+                        class="w-32 px-4 py-3 text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+                        <option value="minutes" <?php echo $task['estimated_time'] < 60 ? 'selected' : ''; ?>>Minutes</option>
+                        <option value="hours" <?php echo $task['estimated_time'] >= 60 ? 'selected' : ''; ?>>Hours</option>
+                    </select>
+                </div>
+                <p class="text-sm text-gray-500">Update the estimated time if needed.</p>
             </div>
 
-            <div>
-                <label for="status" class="block text-sm font-medium text-gray-700">
+            <!-- Status -->
+            <div class="space-y-2">
+                <label for="status" class="block text-sm font-semibold text-gray-700">
                     Status
                 </label>
                 <select id="status" name="status"
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    class="block w-full px-4 py-3 text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
                     <option value="pending" <?php echo $task['status'] === 'pending' ? 'selected' : ''; ?>>
                         Pending
                     </option>
@@ -60,15 +77,40 @@
                         Completed
                     </option>
                 </select>
+                <p class="text-sm text-gray-500">Update the current status of this task.</p>
             </div>
 
-            <div class="flex items-center justify-end space-x-3">
+            <?php if (!empty($errors)): ?>
+                <div class="rounded-lg bg-red-50 border border-red-200 p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">Please correct the following errors:</h3>
+                            <ul class="mt-2 text-sm text-red-700 space-y-1">
+                                <?php foreach ($errors as $error): ?>
+                                    <li class="flex items-center space-x-2">
+                                        <span>•</span>
+                                        <span><?php echo htmlspecialchars($error); ?></span>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center justify-end space-x-4 pt-6 border-t">
                 <a href="/timetracker-php/projects/<?php echo $project['id']; ?>/tasks"
-                    class="text-gray-600 hover:text-gray-800">
+                    class="px-6 py-2.5 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
                     Cancel
                 </a>
                 <button type="submit"
-                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                    class="px-6 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-blue-700 transition-colors">
                     Update Task
                 </button>
             </div>
