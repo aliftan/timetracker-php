@@ -1,7 +1,7 @@
 <?php ob_start(); ?>
 
 <?php
-// Ensure default values exist
+// Initialize variables with defaults if not set
 $time_stats = $time_stats ?? [
     'today' => ['total_hours' => 0],
     'week' => ['total_hours' => 0],

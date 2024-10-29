@@ -75,7 +75,8 @@ switch ($request) {
             header("Location: {$basePath}/login");
             exit;
         }
-        require __DIR__ . '/../views/dashboard/index.php';
+        $controller = new DashboardController();
+        $controller->index();
         break;
 
     case 'projects':

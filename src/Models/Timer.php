@@ -121,28 +121,27 @@ class Timer
     public function getTimerStats($userId, $period = 'today')
     {
         $dateFilter = match ($period) {
-            'today' => "date(start_time) = date('now')",
-            'week' => "date(start_time) >= date('now', '-7 days')",
-            'month' => "date(start_time) >= date('now', '-1 month')",
-            default => "1=1"
+            'today' => "date(start_time, 'localtime') = date('now', 'localtime')",
+            'week' => "date(start_time, 'localtime') >= date('now', '-6 days', 'localtime')",
+            'month' => "strftime('%Y-%m', start_time) = strftime('%Y-%m', 'now')"
         };
 
         $sql = "
-            SELECT 
-                COUNT(DISTINCT task_id) as tasks_tracked,
-                COALESCE(
-                    SUM(
-                        CASE 
-                            WHEN end_time IS NULL THEN 
-                                strftime('%s', 'now') - strftime('%s', start_time)
-                            ELSE 
-                                strftime('%s', end_time) - strftime('%s', start_time)
-                        END
-                    ), 0
-                ) as total_seconds
-            FROM timers
-            WHERE user_id = :user_id AND $dateFilter
-        ";
+        SELECT 
+            COUNT(DISTINCT task_id) as tasks_tracked,
+            ROUND(CAST(
+                SUM(
+                    CASE 
+                        WHEN end_time IS NULL THEN 
+                            (strftime('%s', 'now', 'localtime') - strftime('%s', start_time)) / 3600.0
+                        ELSE 
+                            (strftime('%s', end_time) - strftime('%s', start_time)) / 3600.0
+                    END
+                ) AS FLOAT
+            ), 2) as total_hours
+        FROM timers
+        WHERE user_id = :user_id AND {$dateFilter}
+    ";
 
         $stmt = $this->db->prepare($sql);
         $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
@@ -150,9 +149,8 @@ class Timer
         $stats = $result->fetchArray(SQLITE3_ASSOC);
 
         return [
-            'total_seconds' => $stats['total_seconds'] ?? 0,
-            'total_hours' => ($stats['total_seconds'] ?? 0) / 3600,
-            'tasks_tracked' => $stats['tasks_tracked'] ?? 0
+            'total_hours' => (float)($stats['total_hours'] ?? 0),
+            'tasks_tracked' => (int)($stats['tasks_tracked'] ?? 0)
         ];
     }
 

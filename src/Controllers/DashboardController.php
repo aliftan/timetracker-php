@@ -1,10 +1,12 @@
 <?php
-class DashboardController extends BaseController {
+class DashboardController extends BaseController
+{
     private $project;
     private $task;
     private $timer;
-    
-    public function __construct() {
+
+    public function __construct()
+    {
         if (!Auth::check()) {
             $this->redirect('/login');
         }
@@ -12,11 +14,13 @@ class DashboardController extends BaseController {
         $this->task = new Task();
         $this->timer = new Timer();
     }
-    
-    public function index() {
+
+    public function index()
+    {
         $userId = Auth::user()['id'];
-        
-        $data = [
+
+        // Set default values first
+        $viewData = [
             'title' => 'Dashboard',
             'time_stats' => [
                 'today' => ['total_hours' => 0],
@@ -37,25 +41,18 @@ class DashboardController extends BaseController {
             'recent_tasks' => []
         ];
 
-        // Get time tracking stats
-        $data['time_stats'] = [
+        // Then override with actual data
+        $viewData['time_stats'] = [
             'today' => $this->timer->getTimerStats($userId, 'today'),
             'week' => $this->timer->getTimerStats($userId, 'week'),
             'month' => $this->timer->getTimerStats($userId, 'month')
         ];
 
-        // Get task statistics
-        $data['task_stats'] = $this->task->getTaskStats($userId);
+        $viewData['task_stats'] = $this->task->getTaskStats($userId);
+        $viewData['project_stats'] = $this->project->getProjectStats($userId);
+        $viewData['recent_projects'] = $this->project->getUserProjects($userId, 5);
+        $viewData['recent_tasks'] = $this->task->getUserTasks($userId, 5);
 
-        // Get project statistics
-        $data['project_stats'] = $this->project->getProjectStats($userId);
-
-        // Get recent projects
-        $data['recent_projects'] = $this->project->getUserProjects($userId, 5);
-
-        // Get recent tasks
-        $data['recent_tasks'] = $this->task->getUserTasks($userId, 5);
-        
-        $this->view('dashboard/index', $data);
+        $this->view('dashboard/index', $viewData);
     }
 }

@@ -1,12 +1,3 @@
-<?php
-// Add this helper function at the top of the file
-function isActive($path)
-{
-    $currentPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-    return strpos($currentPath, $path) !== false ? 'text-blue-600 font-medium' : 'text-gray-600';
-}
-?>
-
 <nav class="bg-white shadow-lg">
     <div class="max-w-6xl mx-auto px-4">
         <div class="flex justify-between items-center h-16">
@@ -19,12 +10,12 @@ function isActive($path)
             <div class="flex items-center space-x-6">
                 <?php if (Auth::check()): ?>
                     <a href="/timetracker-php/dashboard"
-                        class="<?php echo isActive('/dashboard'); ?> hover:text-blue-600 transition-colors relative group">
+                        class="<?php echo NavigationHelper::isActive('/dashboard'); ?> hover:text-blue-600 transition-colors relative group">
                         Dashboard
                     </a>
 
                     <a href="/timetracker-php/projects"
-                        class="<?php echo isActive('/projects'); ?> hover:text-blue-600 transition-colors relative group">
+                        class="<?php echo NavigationHelper::isActive('/projects'); ?> hover:text-blue-600 transition-colors relative group">
                         Projects
                     </a>
 

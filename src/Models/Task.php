@@ -33,8 +33,8 @@ class Task
     {
         $stmt = $this->db->prepare('
             SELECT t.*, 
-                   COALESCE(SUM((strftime("%s", tm.end_time) - strftime("%s", tm.start_time))), 0) as tracked_seconds,
-                   t.estimated_time
+                COALESCE(SUM((strftime("%s", tm.end_time) - strftime("%s", tm.start_time))), 0) as tracked_seconds,
+                t.estimated_time
             FROM tasks t
             LEFT JOIN timers tm ON t.id = tm.task_id AND tm.end_time IS NOT NULL
             WHERE t.id = :id
@@ -79,86 +79,6 @@ class Task
         return $stmt->execute();
     }
 
-    public function getProjectTasks($projectId)
-    {
-        $stmt = $this->db->prepare('
-            SELECT t.*, 
-                   p.name as project_name,
-                   t.estimated_time,
-                   COALESCE(SUM((strftime("%s", tm.end_time) - strftime("%s", tm.start_time))), 0) as tracked_seconds
-            FROM tasks t
-            JOIN projects p ON t.project_id = p.id
-            LEFT JOIN timers tm ON t.id = tm.task_id AND tm.end_time IS NOT NULL
-            WHERE t.project_id = :project_id
-            GROUP BY t.id
-            ORDER BY t.created_at DESC
-        ');
-
-        $stmt->bindValue(':project_id', $projectId, SQLITE3_INTEGER);
-        $result = $stmt->execute();
-
-        $tasks = [];
-        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-            $tasks[] = $row;
-        }
-        return $tasks;
-    }
-
-    public function getUserTasks($userId, $limit = null)
-    {
-        $sql = "
-            SELECT t.*, 
-                   p.name as project_name,
-                   COALESCE(SUM((strftime('%s', tm.end_time) - strftime('%s', tm.start_time))/3600.0), 0) as tracked_hours
-            FROM tasks t
-            JOIN projects p ON t.project_id = p.id
-            LEFT JOIN timers tm ON t.id = tm.task_id AND tm.end_time IS NOT NULL
-            WHERE p.user_id = :user_id
-            GROUP BY t.id
-            ORDER BY t.created_at DESC
-        ";
-
-        if ($limit) {
-            $sql .= " LIMIT " . (int)$limit;
-        }
-
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
-        $result = $stmt->execute();
-
-        $tasks = [];
-        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
-            $tasks[] = $row;
-        }
-        return $tasks;
-    }
-
-    public function getTaskStats($userId)
-    {
-        $sql = "
-            SELECT 
-                COUNT(*) as total_tasks,
-                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_tasks,
-                SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_tasks,
-                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_tasks
-            FROM tasks t
-            JOIN projects p ON t.project_id = p.id
-            WHERE p.user_id = :user_id
-        ";
-
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
-        $result = $stmt->execute();
-        $stats = $result->fetchArray(SQLITE3_ASSOC);
-
-        // Ensure all stats have at least 0 value
-        return [
-            'total_tasks' => $stats['total_tasks'] ?? 0,
-            'completed_tasks' => $stats['completed_tasks'] ?? 0,
-            'in_progress_tasks' => $stats['in_progress_tasks'] ?? 0,
-            'pending_tasks' => $stats['pending_tasks'] ?? 0
-        ];
-    }
 
     public function delete($id)
     {
@@ -184,5 +104,92 @@ class Task
             $this->db->query('ROLLBACK');
             return false;
         }
+    }
+
+    public function getProjectTasks($projectId)
+    {
+        $stmt = $this->db->prepare('
+            SELECT t.*, 
+                p.name as project_name,
+                t.estimated_time,
+                COALESCE(SUM((strftime("%s", tm.end_time) - strftime("%s", tm.start_time))), 0) as tracked_seconds
+            FROM tasks t
+            JOIN projects p ON t.project_id = p.id
+            LEFT JOIN timers tm ON t.id = tm.task_id AND tm.end_time IS NOT NULL
+            WHERE t.project_id = :project_id
+            GROUP BY t.id
+            ORDER BY t.created_at DESC
+        ');
+
+        $stmt->bindValue(':project_id', $projectId, SQLITE3_INTEGER);
+        $result = $stmt->execute();
+
+        $tasks = [];
+        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+            $tasks[] = $row;
+        }
+        return $tasks;
+    }
+
+    public function getTaskStats($userId)
+    {
+        $sql = "
+        SELECT 
+            COUNT(DISTINCT t.id) as total_tasks,
+            COUNT(DISTINCT CASE WHEN t.status = 'completed' THEN t.id END) as completed_tasks,
+            COUNT(DISTINCT CASE WHEN t.status = 'in_progress' THEN t.id END) as in_progress_tasks,
+            COUNT(DISTINCT CASE WHEN t.status = 'pending' THEN t.id END) as pending_tasks
+        FROM tasks t
+        JOIN projects p ON t.project_id = p.id
+        WHERE p.user_id = :user_id
+    ";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
+        $result = $stmt->execute();
+        $stats = $result->fetchArray(SQLITE3_ASSOC);
+
+        return [
+            'total_tasks' => (int)($stats['total_tasks'] ?? 0),
+            'completed_tasks' => (int)($stats['completed_tasks'] ?? 0),
+            'in_progress_tasks' => (int)($stats['in_progress_tasks'] ?? 0),
+            'pending_tasks' => (int)($stats['pending_tasks'] ?? 0)
+        ];
+    }
+
+    public function getUserTasks($userId, $limit = null)
+    {
+        $sql = "
+        SELECT 
+            t.*, 
+            p.name as project_name,
+            ROUND(t.estimated_time / 60.0, 1) as estimated_hours,
+            ROUND(COALESCE(
+                SUM(
+                    CASE 
+                        WHEN tm.end_time IS NULL THEN 
+                            (strftime('%s', 'now', 'localtime') - strftime('%s', tm.start_time)) / 3600.0
+                        ELSE 
+                            (strftime('%s', tm.end_time) - strftime('%s', tm.start_time)) / 3600.0
+                    END
+                ), 0
+            ), 1) as tracked_hours
+        FROM tasks t
+        JOIN projects p ON t.project_id = p.id
+        LEFT JOIN timers tm ON t.id = tm.task_id
+        WHERE p.user_id = :user_id
+        GROUP BY t.id
+        ORDER BY t.created_at DESC
+    " . ($limit ? " LIMIT " . (int)$limit : "");
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindValue(':user_id', $userId, SQLITE3_INTEGER);
+        $result = $stmt->execute();
+
+        $tasks = [];
+        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+            $tasks[] = $row;
+        }
+        return $tasks;
     }
 }
