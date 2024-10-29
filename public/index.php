@@ -1,5 +1,4 @@
 <?php
-// public/index.php
 session_start();
 
 // Error reporting
@@ -36,145 +35,135 @@ spl_autoload_register(function ($class) {
     }
 });
 
-// Get the request path
-$request = $_SERVER['REQUEST_URI'];
-$basePath = '/timetracker-php';
+// Initialize Router
+$router = new Router('/timetracker-php');
 
-// Remove base path and trim slashes
-$request = trim(str_replace($basePath, '', $request), '/');
-
-// Routes
-switch ($request) {
-        // Static/Home Routes
-    case '':
-    case 'home':
-        if (Auth::check()) {
-            header("Location: {$basePath}/dashboard");
-            exit;
-        } else {
-            require __DIR__ . '/../views/welcome.php';
-        }
-        break;
-
-        // Authentication Routes
-    case 'login':
-        $controller = new UserController();
-        $controller->login();
-        break;
-
-    case 'register':
-        $controller = new UserController();
-        $controller->register();
-        break;
-
-    case 'logout':
-        $controller = new UserController();
-        $controller->logout();
-        break;
-
-        // Dashboard Route
-    case 'dashboard':
+// Authentication middleware
+function authMiddleware($callback) {
+    return function(...$params) use ($callback) {
         if (!Auth::check()) {
-            header("Location: {$basePath}/login");
+            Session::setFlash('error', 'Please login first');
+            header('Location: /timetracker-php/login');
             exit;
         }
-        $controller = new DashboardController();
-        $controller->index();
-        break;
-
-        // Project Routes
-    case 'projects':
-        $controller = new ProjectController();
-        $controller->index();
-        break;
-
-    case 'projects/create':
-        $controller = new ProjectController();
-        $controller->create();
-        break;
-
-    case (preg_match('/^projects\/(\d+)\/edit$/', $request, $matches) ? true : false):
-        $controller = new ProjectController();
-        $controller->edit($matches[1]);
-        break;
-
-    case (preg_match('/^projects\/(\d+)\/delete$/', $request, $matches) ? true : false):
-        $controller = new ProjectController();
-        $controller->delete($matches[1]);
-        break;
-
-        // Task Routes
-    case (preg_match('/^projects\/(\d+)\/tasks$/', $request, $matches) ? true : false):
-        // List tasks for a project
-        $controller = new TaskController();
-        $controller->index($matches[1]);
-        break;
-
-    case (preg_match('/^projects\/(\d+)\/tasks\/create$/', $request, $matches) ? true : false):
-        // Create new task in project
-        $controller = new TaskController();
-        $controller->create($matches[1]);
-        break;
-
-    case (preg_match('/^(?:projects\/\d+\/)?tasks\/(\d+)\/edit$/', $request, $matches) ? true : false):
-        // Edit task (works for both direct and project-scoped routes)
-        $controller = new TaskController();
-        $controller->edit($matches[1]);
-        break;
-
-    case (preg_match('/^tasks\/(\d+)\/status$/', $request, $matches) ? true : false):
-        // Update task status
-        $controller = new TaskController();
-        $controller->updateStatus($matches[1]);
-        break;
-
-    case (preg_match('/^tasks\/(\d+)\/delete$/', $request, $matches) ? true : false):
-        // Delete task
-        $controller = new TaskController();
-        $controller->delete($matches[1]);
-        break;
-
-        // Timer Routes
-    case (preg_match('/^tasks\/(\d+)\/timer\/start$/', $request, $matches) ? true : false):
-        // Start timer for task
-        $controller = new TimerController();
-        $controller->start($matches[1]);
-        break;
-
-    case (preg_match('/^timer\/(\d+)\/stop$/', $request, $matches) ? true : false):
-        // Stop running timer
-        $controller = new TimerController();
-        $controller->stop($matches[1]);
-        break;
-
-    case 'timer/current':
-        // Get current running timer
-        $controller = new TimerController();
-        $controller->current();
-        break;
-
-        // Profile Routes
-    case 'profile':
-        // Show profile settings
-        $controller = new ProfileController();
-        $controller->index();
-        break;
-
-    case 'profile/update':
-        // Update profile information
-        $controller = new ProfileController();
-        $controller->update();
-        break;
-
-    case 'profile/password':
-        // Change password
-        $controller = new ProfileController();
-        $controller->password();
-        break;
-
-        // 404 Route
-    default:
-        http_response_code(404);
-        require __DIR__ . '/../views/404.php';
-        break;
+        return call_user_func_array($callback, $params);
+    };
 }
+
+// Static/Home Routes
+$router->get('', function() {
+    if (Auth::check()) {
+        header('Location: /timetracker-php/dashboard');
+        exit;
+    }
+    require __DIR__ . '/../views/welcome.php';
+});
+
+// Auth Routes
+$router->get('login', function() {
+    $controller = new UserController();
+    $controller->login();
+});
+
+$router->post('login', function() {
+    $controller = new UserController();
+    $controller->login();
+});
+
+$router->get('register', function() {
+    $controller = new UserController();
+    $controller->register();
+});
+
+$router->post('register', function() {
+    $controller = new UserController();
+    $controller->register();
+});
+
+$router->get('logout', authMiddleware(function() {
+    $controller = new UserController();
+    $controller->logout();
+}));
+
+// Dashboard Route
+$router->get('dashboard', authMiddleware(function() {
+    $controller = new DashboardController();
+    $controller->index();
+}));
+
+// Project Routes
+$router->get('projects', authMiddleware(function() {
+    $controller = new ProjectController();
+    $controller->index();
+}));
+
+$router->get('projects/create', authMiddleware(function() {
+    $controller = new ProjectController();
+    $controller->create();
+}));
+
+$router->post('projects/create', authMiddleware(function() {
+    $controller = new ProjectController();
+    $controller->create();
+}));
+
+$router->get('projects/:id/edit', authMiddleware(function($id) {
+    $controller = new ProjectController();
+    $controller->edit($id);
+}));
+
+$router->post('projects/:id/edit', authMiddleware(function($id) {
+    $controller = new ProjectController();
+    $controller->edit($id);
+}));
+
+// Task Routes
+$router->get('projects/:id/tasks', authMiddleware(function($id) {
+    $controller = new TaskController();
+    $controller->index($id);
+}));
+
+$router->get('projects/:projectId/tasks/create', authMiddleware(function($projectId) {
+    $controller = new TaskController();
+    $controller->create($projectId);
+}));
+
+$router->post('projects/:projectId/tasks/create', authMiddleware(function($projectId) {
+    $controller = new TaskController();
+    $controller->create($projectId);
+}));
+
+$router->get('projects/:projectId/tasks/:taskId/edit', authMiddleware(function($projectId, $taskId) {
+    $controller = new TaskController();
+    $controller->edit($taskId, $projectId);
+}));
+
+$router->post('projects/:projectId/tasks/:taskId/edit', authMiddleware(function($projectId, $taskId) {
+    $controller = new TaskController();
+    $controller->edit($taskId, $projectId);
+}));
+
+// Timer Routes
+$router->post('tasks/:id/timer/start', authMiddleware(function($id) {
+    $controller = new TimerController();
+    $controller->start($id);
+}));
+
+$router->post('timer/:id/stop', authMiddleware(function($id) {
+    $controller = new TimerController();
+    $controller->stop($id);
+}));
+
+$router->get('timer/current', authMiddleware(function() {
+    $controller = new TimerController();
+    $controller->current();
+}));
+
+// 404 Handler
+$router->setNotFound(function() {
+    http_response_code(404);
+    require __DIR__ . '/../views/404.php';
+});
+
+// Dispatch the route
+$router->dispatch($_SERVER['REQUEST_URI'], $_SERVER['REQUEST_METHOD']);

@@ -5,7 +5,7 @@
             <p class="mt-2 text-gray-600">Add a new task to <?php echo htmlspecialchars($project['name']); ?></p>
         </div>
 
-        <form method="POST" class="space-y-8">
+        <form method="POST" action="/timetracker-php/projects/<?php echo $project['id']; ?>/tasks/create" class="space-y-8">
             <!-- Task Name -->
             <div class="space-y-2">
                 <label for="name" class="block text-sm font-semibold text-gray-700">

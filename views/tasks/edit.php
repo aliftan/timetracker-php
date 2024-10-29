@@ -5,7 +5,7 @@
             <p class="mt-2 text-gray-600">Update task details and progress</p>
         </div>
 
-        <form method="POST" class="space-y-8">
+        <form method="POST" action="/timetracker-php/projects/<?php echo $project['id']; ?>/tasks/<?php echo $task['id']; ?>/edit" class="space-y-8">
             <!-- Task Name -->
             <div class="space-y-2">
                 <label for="name" class="block text-sm font-semibold text-gray-700">

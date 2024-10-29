@@ -7,9 +7,8 @@ class TaskController extends BaseController
 
     public function __construct()
     {
-        if (!Auth::check()) {
-            $this->redirect('/login');
-        }
+        $this->requireAuth();
+
         $this->task = new Task();
         $this->project = new Project();
         $this->timer = new Timer();
@@ -17,20 +16,12 @@ class TaskController extends BaseController
 
     public function index($projectId)
     {
-        $project = $this->project->find($projectId);
-        if (!$project || $project['user_id'] !== Auth::user()['id']) {
-            Session::setFlash('error', 'Project not found');
-            $this->redirect('/projects');
+        $project = $this->validateProjectAccess($projectId);
+        if (!$project) {
+            return;
         }
 
-        // Get tasks
-        $tasks = $this->task->getProjectTasks($projectId);
-
-        // Add timer information to each task
-        foreach ($tasks as &$task) {
-            $task['tracked_seconds'] = $this->timer->getTrackedSeconds($task['id']);
-            $task['timer_history'] = $this->timer->getTimerHistory($task['id']);
-        }
+        $tasks = $this->getTasksWithTimerInfo($projectId);
 
         $this->view('tasks/index', [
             'title' => $project['name'] . ' - Tasks',
@@ -41,95 +32,128 @@ class TaskController extends BaseController
 
     public function create($projectId)
     {
-        $project = $this->project->find($projectId);
-        if (!$project || $project['user_id'] !== Auth::user()['id']) {
-            Session::setFlash('error', 'Project not found');
-            $this->redirect('/projects');
-        }
+        error_log("TaskController::create called with projectId: " . $projectId);
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $validator = new Validator($_POST);
-            $validator->required('name')
-                ->required('estimated_time');  // Changed from estimated_hours
-
-            if (!$validator->hasErrors()) {
-                $data = [
-                    'project_id' => $projectId,
-                    'name' => $_POST['name'],
-                    'description' => $_POST['description'] ?? '',
-                    'estimated_time' => $_POST['estimated_time'],
-                    'time_unit' => $_POST['time_unit'] ?? 'minutes',  // Default to minutes
-                    'status' => 'pending'
-                ];
-
-                if ($this->task->create($data)) {
-                    Session::setFlash('success', 'Task created successfully');
-                    $this->redirect("/projects/$projectId/tasks");
-                } else {
-                    Session::setFlash('error', 'Failed to create task');
-                }
-            }
-
-            $this->view('tasks/create', [
-                'title' => 'Create Task',
-                'project' => $project,
-                'errors' => $validator->getErrors(),
-                'data' => $_POST
-            ]);
+        // First handle project access
+        $project = $this->validateProjectAccess($projectId);
+        if (!$project) {
+            error_log("Project validation failed for ID: " . $projectId);
             return;
         }
+        error_log("Project validation passed for ID: " . $projectId);
 
+        // For POST requests
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            error_log("Processing POST request for task creation");
+
+            $validator = new Validator($_POST);
+            $validator->required('name')
+                ->required('estimated_time');
+
+            // Handle validation errors
+            if ($validator->hasErrors()) {
+                error_log("Validation errors: " . print_r($validator->getErrors(), true));
+                $this->view('tasks/create', [
+                    'title' => 'Create Task',
+                    'project' => $project,
+                    'errors' => $validator->getErrors(),
+                    'data' => $_POST
+                ]);
+                return;
+            }
+
+            $data = $this->prepareTaskData($_POST, $projectId);
+            error_log("Prepared task data: " . print_r($data, true));
+
+            // Create task and handle response
+            if ($this->task->create($data)) {
+                error_log("Task created successfully, redirecting to: /projects/$projectId/tasks");
+                Session::setFlash('success', 'Task created successfully');
+                $this->redirect("/projects/$projectId/tasks");
+            } else {
+                error_log("Failed to create task");
+                Session::setFlash('error', 'Failed to create task');
+                $this->view('tasks/create', [
+                    'title' => 'Create Task',
+                    'project' => $project,
+                    'data' => $_POST
+                ]);
+                return;
+            }
+        }
+
+        // Show create form (GET request)
+        error_log("Showing create form (GET request)");
         $this->view('tasks/create', [
             'title' => 'Create Task',
             'project' => $project
         ]);
     }
 
-    public function edit($taskId)
+    public function edit($taskId, $projectId = null)
     {
-        $task = $this->task->find($taskId);
+        error_log("TaskController::edit called with taskId: {$taskId}, projectId: {$projectId}");
+
+        // First validate task access
+        $task = $this->validateTaskAccess($taskId);
         if (!$task) {
-            Session::setFlash('error', 'Task not found');
-            $this->redirect('/projects');
+            error_log("Task validation failed for ID: {$taskId}");
+            return;
         }
+        error_log("Task validation passed for ID: {$taskId}");
 
-        $project = $this->project->find($task['project_id']);
-        if (!$project || $project['user_id'] !== Auth::user()['id']) {
-            Session::setFlash('error', 'Unauthorized');
-            $this->redirect('/projects');
+        // Then validate project access
+        $project = $this->validateProjectAccess($task['project_id'], "/projects/{$task['project_id']}/tasks");
+        if (!$project) {
+            error_log("Project validation failed for ID: {$task['project_id']}");
+            return;
         }
+        error_log("Project validation passed for ID: {$task['project_id']}");
 
+        // For POST requests
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            error_log("Processing POST request for task edit");
+
             $validator = new Validator($_POST);
             $validator->required('name')
                 ->required('estimated_time');
 
-            if (!$validator->hasErrors()) {
-                $data = [
-                    'name' => $_POST['name'],
-                    'description' => $_POST['description'] ?? '',
-                    'estimated_time' => floatval($_POST['estimated_time']),
-                    'status' => $_POST['status']
-                ];
-
-                if ($this->task->update($taskId, $data)) {
-                    Session::setFlash('success', 'Task updated successfully');
-                    $this->redirect("/projects/{$project['id']}/tasks");
-                } else {
-                    Session::setFlash('error', 'Failed to update task');
-                }
+            // Handle validation errors
+            if ($validator->hasErrors()) {
+                error_log("Validation errors: " . print_r($validator->getErrors(), true));
+                $this->view('tasks/edit', [
+                    'title' => 'Edit Task',
+                    'task' => $task,
+                    'project' => $project,
+                    'errors' => $validator->getErrors(),
+                    'data' => $_POST
+                ]);
+                return;
             }
 
-            $this->view('tasks/edit', [
-                'title' => 'Edit Task',
-                'task' => $task,
-                'project' => $project,
-                'errors' => $validator->getErrors(),
-                'data' => $_POST
-            ]);
-            return;
+            $data = $this->prepareTaskData($_POST);
+            error_log("Prepared task data for update: " . print_r($data, true));
+
+            // Update task and handle response
+            if ($this->task->update($taskId, $data)) {
+                error_log("Task updated successfully, redirecting to: /projects/{$project['id']}/tasks");
+                Session::setFlash('success', 'Task updated successfully');
+                $this->redirect("/projects/{$project['id']}/tasks");
+            } else {
+                error_log("Failed to update task");
+                Session::setFlash('error', 'Failed to update task');
+                $this->view('tasks/edit', [
+                    'title' => 'Edit Task',
+                    'task' => $task,
+                    'project' => $project,
+                    'data' => $_POST
+                ]);
+                return;
+            }
         }
 
+        // Show edit form (GET request)
+        error_log("Showing edit form (GET request)");
         $this->view('tasks/edit', [
             'title' => 'Edit Task',
             'task' => $task,
@@ -139,25 +163,17 @@ class TaskController extends BaseController
 
     public function updateStatus($taskId)
     {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->json(['error' => 'Invalid request method']);
+        if (!$this->validateMethod('POST')) {
             return;
         }
 
-        $task = $this->task->find($taskId);
+        $task = $this->validateTaskAccess($taskId);
         if (!$task) {
-            $this->json(['error' => 'Task not found']);
-            return;
-        }
-
-        $project = $this->project->find($task['project_id']);
-        if (!$project || $project['user_id'] !== Auth::user()['id']) {
-            $this->json(['error' => 'Unauthorized']);
             return;
         }
 
         $status = $_POST['status'] ?? '';
-        if (!in_array($status, ['pending', 'in_progress', 'completed'])) {
+        if (!$this->isValidStatus($status)) {
             $this->json(['error' => 'Invalid status']);
             return;
         }
@@ -171,43 +187,123 @@ class TaskController extends BaseController
 
     public function delete($taskId)
     {
-        // Check if it's a POST request
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->json(['error' => 'Invalid request method']);
+        if (!$this->validateMethod('POST')) {
             return;
         }
 
-        // Find the task
+        $task = $this->validateTaskAccess($taskId);
+        if (!$task) {
+            return;
+        }
+
+        if ($this->task->delete($taskId)) {
+            $this->handleSuccessResponse(
+                'Task deleted successfully',
+                $this->isAjaxRequest() ? null : "/projects/{$task['project_id']}/tasks"
+            );
+        } else {
+            $this->handleErrorResponse(
+                'Failed to delete task',
+                "/projects/{$task['project_id']}/tasks"
+            );
+        }
+    }
+
+    /**
+     * Validate project access
+     */
+    private function validateProjectAccess($projectId, $redirectPath = '/projects')
+    {
+        $project = $this->project->find($projectId);
+        if (!$project || $project['user_id'] !== Auth::user()['id']) {
+            // Only redirect if not an AJAX request
+            if ($this->isAjaxRequest()) {
+                $this->json(['error' => 'Project not found']);
+            } else {
+                Session::setFlash('error', 'Project not found');
+                $this->redirect($redirectPath);
+            }
+            return false;
+        }
+        return $project;
+    }
+
+    /**
+     * Validate task access
+     */
+    private function validateTaskAccess($taskId)
+    {
+        error_log("Validating task access for ID: {$taskId}");
+
         $task = $this->task->find($taskId);
         if (!$task) {
-            $this->json(['error' => 'Task not found']);
-            return;
-        }
-
-        // Check authorization
-        $project = $this->project->find($task['project_id']);
-        if (!$project || $project['user_id'] !== Auth::user()['id']) {
-            $this->json(['error' => 'Unauthorized']);
-            return;
-        }
-
-        // Delete and handle response
-        if ($this->task->delete($taskId)) {
-            Session::setFlash('success', 'Task deleted successfully');
-
-            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
-                $this->json(['success' => true]);
+            error_log("Task not found with ID: {$taskId}");
+            if ($this->isAjaxRequest()) {
+                $this->json(['error' => 'Task not found']);
             } else {
-                $this->redirect("/projects/{$project['id']}/tasks");
+                Session::setFlash('error', 'Task not found');
+                $this->redirect('/projects');
             }
-        } else {
-            Session::setFlash('error', 'Failed to delete task');
+            return false;
+        }
 
-            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
-                $this->json(['error' => 'Failed to delete task']);
-            } else {
-                $this->redirect("/projects/{$project['id']}/tasks");
+        // Optionally add ownership validation if needed
+        if ($task['project_id']) {
+            $project = $this->project->find($task['project_id']);
+            if (!$project || $project['user_id'] !== Auth::user()['id']) {
+                error_log("Task access denied - user not authorized");
+                if ($this->isAjaxRequest()) {
+                    $this->json(['error' => 'Not authorized to access this task']);
+                } else {
+                    Session::setFlash('error', 'Not authorized to access this task');
+                    $this->redirect('/projects');
+                }
+                return false;
             }
         }
+
+        error_log("Task access validation successful");
+        return $task;
+    }
+
+    /**
+     * Get tasks with timer information
+     */
+    private function getTasksWithTimerInfo($projectId)
+    {
+        $tasks = $this->task->getProjectTasks($projectId);
+        foreach ($tasks as &$task) {
+            $task['tracked_seconds'] = $this->timer->getTrackedSeconds($task['id']);
+            $task['timer_history'] = $this->timer->getTimerHistory($task['id']);
+        }
+        return $tasks;
+    }
+
+    /**
+     * Prepare task data for create/update
+     */
+    private function prepareTaskData($data, $projectId = null)
+    {
+        $taskData = [
+            'name' => $data['name'],
+            'description' => $data['description'] ?? '',
+            'estimated_time' => floatval($data['estimated_time']),
+            'status' => $data['status'] ?? 'pending',
+            'time_unit' => $data['time_unit'] ?? 'minutes'
+        ];
+
+        if ($projectId) {
+            $taskData['project_id'] = $projectId;
+        }
+
+        return $taskData;
+    }
+
+    /**
+     * Check if status is valid
+     */
+    private function isValidStatus($status)
+    {
+        return in_array($status, ['pending', 'in_progress', 'completed']);
     }
 }

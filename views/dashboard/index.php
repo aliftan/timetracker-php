@@ -105,9 +105,6 @@ $recent_tasks = $recent_tasks ?? [];
         <div class="bg-white rounded-lg shadow-sm border p-6">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-semibold text-gray-900">Recent Projects</h3>
-                <a href="/timetracker-php/projects" class="text-blue-600 hover:text-blue-800 text-sm">
-                    View All
-                </a>
             </div>
             <?php if (!empty($recent_projects)): ?>
                 <div class="space-y-3">
@@ -139,9 +136,6 @@ $recent_tasks = $recent_tasks ?? [];
         <div class="bg-white rounded-lg shadow-sm border p-6">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-semibold text-gray-900">Recent Tasks</h3>
-                <a href="/timetracker-php/tasks" class="text-blue-600 hover:text-blue-800 text-sm">
-                    View All
-                </a>
             </div>
             <?php if (!empty($recent_tasks)): ?>
                 <div class="space-y-3">

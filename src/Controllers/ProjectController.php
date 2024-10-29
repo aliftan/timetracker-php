@@ -28,24 +28,32 @@ class ProjectController extends BaseController
             $validator = new Validator($_POST);
             $validator->required('name');
 
-            if (!$validator->hasErrors()) {
-                $data = [
-                    'name' => $_POST['name'],
-                    'description' => $_POST['description'] ?? '',
-                    'user_id' => Auth::user()['id']
-                ];
-
-                if ($this->project->create($data)) {
-                    Session::setFlash('success', 'Project created successfully!');
-                    $this->redirect('/projects');
-                }
+            if ($validator->hasErrors()) {
+                $this->view('projects/create', [
+                    'title' => 'Create Project',
+                    'errors' => $validator->getErrors(),
+                    'data' => $_POST
+                ]);
+                return;
             }
 
-            $this->view('projects/create', [
-                'title' => 'Create Project',
-                'errors' => $validator->getErrors(),
-                'data' => $_POST
-            ]);
+            $data = [
+                'name' => $_POST['name'],
+                'description' => $_POST['description'] ?? '',
+                'user_id' => Auth::user()['id']
+            ];
+
+            if ($this->project->create($data)) {
+                Session::setFlash('success', 'Project created successfully!');
+                $this->redirect('/projects');
+            } else {
+                Session::setFlash('error', 'Failed to create project');
+                $this->view('projects/create', [
+                    'title' => 'Create Project',
+                    'data' => $_POST
+                ]);
+                return;
+            }
         }
 
         $this->view('projects/create', ['title' => 'Create Project']);
@@ -54,35 +62,42 @@ class ProjectController extends BaseController
     public function edit($id)
     {
         $project = $this->project->find($id);
-
-        if (!$project || $project['user_id'] !== Auth::user()['id']) {
-            Session::setFlash('error', 'Project not found');
-            $this->redirect('/projects');
+        if (!$this->canAccessProject($project)) {
+            return;
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $validator = new Validator($_POST);
             $validator->required('name');
 
-            if (!$validator->hasErrors()) {
-                $data = [
-                    'name' => $_POST['name'],
-                    'description' => $_POST['description'] ?? '',
-                    'is_active' => isset($_POST['is_active']) ? 1 : 0
-                ];
-
-                if ($this->project->update($id, $data)) {
-                    Session::setFlash('success', 'Project updated successfully!');
-                    $this->redirect('/projects');
-                }
+            if ($validator->hasErrors()) {
+                $this->view('projects/edit', [
+                    'title' => 'Edit Project',
+                    'project' => $project,
+                    'errors' => $validator->getErrors(),
+                    'data' => $_POST
+                ]);
+                return;
             }
 
-            $this->view('projects/edit', [
-                'title' => 'Edit Project',
-                'project' => $project,
-                'errors' => $validator->getErrors(),
-                'data' => $_POST
-            ]);
+            $data = [
+                'name' => $_POST['name'],
+                'description' => $_POST['description'] ?? '',
+                'is_active' => isset($_POST['is_active']) ? 1 : 0
+            ];
+
+            if ($this->project->update($id, $data)) {
+                Session::setFlash('success', 'Project updated successfully!');
+                $this->redirect('/projects');
+            } else {
+                Session::setFlash('error', 'Failed to update project');
+                $this->view('projects/edit', [
+                    'title' => 'Edit Project',
+                    'project' => $project,
+                    'data' => $_POST
+                ]);
+                return;
+            }
         }
 
         $this->view('projects/edit', [
@@ -93,20 +108,12 @@ class ProjectController extends BaseController
 
     public function delete($id)
     {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->json(['error' => 'Invalid request method']);
+        if (!$this->validateMethod('POST')) {
             return;
         }
 
         $project = $this->project->find($id);
-
-        if (!$project || $project['user_id'] !== Auth::user()['id']) {
-            if ($this->isAjaxRequest()) {
-                $this->json(['error' => 'Project not found']);
-            } else {
-                Session::setFlash('error', 'Project not found');
-                $this->redirect('/projects');
-            }
+        if (!$this->canAccessProject($project)) {
             return;
         }
 
@@ -127,9 +134,17 @@ class ProjectController extends BaseController
         }
     }
 
-    private function isAjaxRequest()
+    private function canAccessProject($project)
     {
-        return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
-            strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
+        if (!$project || $project['user_id'] !== Auth::user()['id']) {
+            if ($this->isAjaxRequest()) {
+                $this->json(['error' => 'Project not found']);
+            } else {
+                Session::setFlash('error', 'Project not found');
+                $this->redirect('/projects');
+            }
+            return false;
+        }
+        return true;
     }
 }

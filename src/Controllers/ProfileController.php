@@ -20,8 +20,8 @@ class ProfileController extends BaseController
 
     public function update()
     {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirect('/profile');
+        if (!$this->validateMethod('POST')) {
+            return;
         }
 
         $validator = new Validator($_POST);
@@ -42,14 +42,11 @@ class ProfileController extends BaseController
             return;
         }
 
-        $data = [
-            'username' => $_POST['username'],
-            'email' => $_POST['email']
-        ];
+        $data = $this->prepareProfileData($_POST);
 
         if ($this->user->update(Auth::user()['id'], $data)) {
             Session::setFlash('success', 'Profile updated successfully');
-            Auth::refresh(); // Refresh the session with new data
+            Auth::refresh();
         } else {
             Session::setFlash('error', 'Failed to update profile');
         }
@@ -59,28 +56,11 @@ class ProfileController extends BaseController
 
     public function password()
     {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirect('/profile');
-        }
-
-        $validator = new Validator($_POST);
-        $validator->required('current_password')
-            ->required('new_password')->min('new_password', 6)
-            ->required('confirm_password')->match('confirm_password', 'new_password');
-
-        if ($validator->hasErrors()) {
-            Session::setFlash('error', 'Please fix the errors below');
-            $this->view('profile/index', [
-                'title' => 'Profile Settings',
-                'errors' => $validator->getErrors()
-            ]);
+        if (!$this->validateMethod('POST')) {
             return;
         }
 
-        // Verify current password
-        if (!$this->user->verifyPassword(Auth::user()['id'], $_POST['current_password'])) {
-            Session::setFlash('error', 'Current password is incorrect');
-            $this->redirect('/profile');
+        if (!$this->validatePasswordChange($_POST)) {
             return;
         }
 
@@ -91,5 +71,38 @@ class ProfileController extends BaseController
         }
 
         $this->redirect('/profile');
+    }
+
+    private function validatePasswordChange($data)
+    {
+        $validator = new Validator($data);
+        $validator->required('current_password')
+            ->required('new_password')->min('new_password', 6)
+            ->required('confirm_password')->match('confirm_password', 'new_password');
+
+        if ($validator->hasErrors()) {
+            Session::setFlash('error', 'Please fix the errors below');
+            $this->view('profile/index', [
+                'title' => 'Profile Settings',
+                'errors' => $validator->getErrors()
+            ]);
+            return false;
+        }
+
+        if (!$this->user->verifyPassword(Auth::user()['id'], $data['current_password'])) {
+            Session::setFlash('error', 'Current password is incorrect');
+            $this->redirect('/profile');
+            return false;
+        }
+
+        return true;
+    }
+
+    private function prepareProfileData($data)
+    {
+        return [
+            'username' => $data['username'],
+            'email' => $data['email']
+        ];
     }
 }

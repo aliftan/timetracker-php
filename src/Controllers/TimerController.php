@@ -6,90 +6,86 @@ class TimerController extends BaseController
 
     public function __construct()
     {
-        if (!Auth::check()) {
-            if ($this->isAjaxRequest()) {
-                $this->json(['error' => 'Unauthorized']);
-            }
-            $this->redirect('/login');
-        }
+        // Use base controller auth check
+        $this->requireAuth();
+
         $this->timer = new Timer();
         $this->task = new Task();
     }
 
     public function start($taskId)
     {
-        $task = $this->task->find($taskId);
+        // Validate request method
+        if (!$this->validateMethod('POST')) {
+            return;
+        }
+
+        // Validate task existence and ownership
+        $task = $this->validateTaskAccess($taskId);
         if (!$task) {
-            if ($this->isAjaxRequest()) {
-                $this->json(['error' => 'Task not found']);
-            } else {
-                Session::setFlash('error', 'Task not found');
-                $this->redirect('/dashboard');
-            }
             return;
         }
 
         // Start the timer
         if ($this->timer->startTimer($taskId, Auth::user()['id'])) {
-            // Always set flash message regardless of request type
-            Session::setFlash('success', 'Timer started successfully');
-
-            if ($this->isAjaxRequest()) {
-                $this->json([
-                    'success' => true,
-                    'message' => 'Timer started successfully'
-                ]);
-            } else {
-                $this->redirect("/projects/{$task['project_id']}/tasks");
-            }
+            $this->handleSuccessResponse(
+                'Timer started successfully',
+                $this->isAjaxRequest() ? null : "/projects/{$task['project_id']}/tasks"
+            );
         } else {
-            Session::setFlash('error', 'Could not start timer');
-
-            if ($this->isAjaxRequest()) {
-                $this->json(['error' => 'Could not start timer']);
-            } else {
-                $this->redirect("/projects/{$task['project_id']}/tasks");
-            }
+            $this->handleErrorResponse(
+                'Could not start timer',
+                "/projects/{$task['project_id']}/tasks"
+            );
         }
     }
 
     public function stop($timerId)
     {
+        // Validate request method
+        if (!$this->validateMethod('POST')) {
+            return;
+        }
+
+        // Stop the timer
         if ($this->timer->stopTimer($timerId)) {
-            // Always set flash message regardless of request type
-            Session::setFlash('success', 'Timer stopped successfully');
-
-            if ($this->isAjaxRequest()) {
-                $this->json([
-                    'success' => true,
-                    'message' => 'Timer stopped successfully'
-                ]);
-            } else {
-                $this->redirect($_SERVER['HTTP_REFERER'] ?? '/dashboard');
-            }
+            $this->handleSuccessResponse(
+                'Timer stopped successfully',
+                $this->isAjaxRequest() ? null : ($_SERVER['HTTP_REFERER'] ?? '/dashboard')
+            );
         } else {
-            Session::setFlash('error', 'Could not stop timer');
-
-            if ($this->isAjaxRequest()) {
-                $this->json(['error' => 'Could not stop timer']);
-            } else {
-                $this->redirect('/dashboard');
-            }
+            $this->handleErrorResponse(
+                'Could not stop timer',
+                '/dashboard'
+            );
         }
     }
 
     public function current()
     {
         $activeTimer = $this->timer->getActiveTimer(Auth::user()['id']);
+
         $this->json([
             'success' => true,
             'timer' => $activeTimer
         ]);
     }
 
-    private function isAjaxRequest()
+    /**
+     * Validate task existence and access
+     */
+    private function validateTaskAccess($taskId)
     {
-        return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
-            strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
+        $task = $this->task->find($taskId);
+
+        if (!$task) {
+            $this->handleErrorResponse('Task not found', '/dashboard');
+            return false;
+        }
+
+        // Additional project access check could be added here if needed
+        // For example, checking if the task belongs to user's project
+
+        return $task;
     }
 }
