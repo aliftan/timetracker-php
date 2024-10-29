@@ -31,12 +31,14 @@ class UserController extends BaseController
                     $this->view('auth/login', [
                         'email' => $email
                     ]);
+                    return;
                 }
             } else {
                 $this->view('auth/login', [
                     'errors' => $validator->getErrors(),
                     'email' => $_POST['email'] ?? ''
                 ]);
+                return;
             }
         }
 
@@ -71,12 +73,14 @@ class UserController extends BaseController
                     $this->view('auth/register', [
                         'data' => $data
                     ]);
+                    return;
                 }
             } else {
                 $this->view('auth/register', [
                     'errors' => $validator->getErrors(),
                     'data' => $_POST
                 ]);
+                return;
             }
         }
 

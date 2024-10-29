@@ -45,6 +45,7 @@ $request = trim(str_replace($basePath, '', $request), '/');
 
 // Routes
 switch ($request) {
+        // Static/Home Routes
     case '':
     case 'home':
         if (Auth::check()) {
@@ -55,6 +56,7 @@ switch ($request) {
         }
         break;
 
+        // Authentication Routes
     case 'login':
         $controller = new UserController();
         $controller->login();
@@ -70,6 +72,7 @@ switch ($request) {
         $controller->logout();
         break;
 
+        // Dashboard Route
     case 'dashboard':
         if (!Auth::check()) {
             header("Location: {$basePath}/login");
@@ -79,6 +82,7 @@ switch ($request) {
         $controller->index();
         break;
 
+        // Project Routes
     case 'projects':
         $controller = new ProjectController();
         $controller->index();
@@ -99,66 +103,76 @@ switch ($request) {
         $controller->delete($matches[1]);
         break;
 
-        // For task listing within a project
+        // Task Routes
     case (preg_match('/^projects\/(\d+)\/tasks$/', $request, $matches) ? true : false):
+        // List tasks for a project
         $controller = new TaskController();
         $controller->index($matches[1]);
         break;
 
-        // For task creation
     case (preg_match('/^projects\/(\d+)\/tasks\/create$/', $request, $matches) ? true : false):
+        // Create new task in project
         $controller = new TaskController();
         $controller->create($matches[1]);
         break;
 
-        // For task editing - matches both /tasks/1/edit and /projects/1/tasks/1/edit
     case (preg_match('/^(?:projects\/\d+\/)?tasks\/(\d+)\/edit$/', $request, $matches) ? true : false):
+        // Edit task (works for both direct and project-scoped routes)
         $controller = new TaskController();
         $controller->edit($matches[1]);
         break;
 
-        // For task status updates
     case (preg_match('/^tasks\/(\d+)\/status$/', $request, $matches) ? true : false):
+        // Update task status
         $controller = new TaskController();
         $controller->updateStatus($matches[1]);
         break;
 
-        // For task deletion
     case (preg_match('/^tasks\/(\d+)\/delete$/', $request, $matches) ? true : false):
+        // Delete task
         $controller = new TaskController();
         $controller->delete($matches[1]);
         break;
 
+        // Timer Routes
     case (preg_match('/^tasks\/(\d+)\/timer\/start$/', $request, $matches) ? true : false):
+        // Start timer for task
         $controller = new TimerController();
         $controller->start($matches[1]);
         break;
 
     case (preg_match('/^timer\/(\d+)\/stop$/', $request, $matches) ? true : false):
+        // Stop running timer
         $controller = new TimerController();
         $controller->stop($matches[1]);
         break;
 
     case 'timer/current':
+        // Get current running timer
         $controller = new TimerController();
         $controller->current();
         break;
 
+        // Profile Routes
     case 'profile':
+        // Show profile settings
         $controller = new ProfileController();
         $controller->index();
         break;
 
     case 'profile/update':
+        // Update profile information
         $controller = new ProfileController();
         $controller->update();
         break;
 
     case 'profile/password':
+        // Change password
         $controller = new ProfileController();
         $controller->password();
         break;
 
+        // 404 Route
     default:
         http_response_code(404);
         require __DIR__ . '/../views/404.php';

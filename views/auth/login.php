@@ -1,12 +1,6 @@
-<div class="max-w-md mx-auto">
+<div class="max-w-md mx-auto px-4 py-8">
     <div class="bg-white rounded-lg shadow-md p-8">
         <h2 class="text-2xl font-bold mb-6 text-center">Login</h2>
-
-        <?php if (!empty($error)): ?>
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-                <?php echo htmlspecialchars($error); ?>
-            </div>
-        <?php endif; ?>
 
         <form method="POST" action="/timetracker-php/login">
             <div class="mb-4">
