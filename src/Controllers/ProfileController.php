@@ -5,16 +5,15 @@ class ProfileController extends BaseController
 
     public function __construct()
     {
-        if (!Auth::check()) {
-            $this->redirect('/login');
-        }
+        $this->requireAuth();
         $this->user = new User();
     }
 
     public function index()
     {
         $this->view('profile/index', [
-            'title' => 'Profile Settings'
+            'title' => 'Profile Settings',
+            'user' => Auth::user()
         ]);
     }
 
@@ -37,7 +36,8 @@ class ProfileController extends BaseController
             Session::setFlash('error', 'Please fix the errors below');
             $this->view('profile/index', [
                 'title' => 'Profile Settings',
-                'errors' => $validator->getErrors()
+                'errors' => $validator->getErrors(),
+                'user' => Auth::user()
             ]);
             return;
         }
@@ -84,7 +84,8 @@ class ProfileController extends BaseController
             Session::setFlash('error', 'Please fix the errors below');
             $this->view('profile/index', [
                 'title' => 'Profile Settings',
-                'errors' => $validator->getErrors()
+                'errors' => $validator->getErrors(),
+                'user' => Auth::user()
             ]);
             return false;
         }
@@ -101,8 +102,8 @@ class ProfileController extends BaseController
     private function prepareProfileData($data)
     {
         return [
-            'username' => $data['username'],
-            'email' => $data['email']
+            'username' => trim($data['username']),
+            'email' => trim($data['email'])
         ];
     }
 }
