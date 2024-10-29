@@ -1,5 +1,3 @@
-<?php ob_start(); ?>
-
 <div class="max-w-md mx-auto">
     <div class="bg-white rounded-lg shadow-md p-8">
         <h2 class="text-2xl font-bold mb-6 text-center">Login</h2>
@@ -40,8 +38,3 @@
         </form>
     </div>
 </div>
-
-<?php
-$content = ob_get_clean();
-require __DIR__ . '/../layouts/app.php';
-?>

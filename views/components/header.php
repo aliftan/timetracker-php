@@ -1,5 +1,5 @@
 <nav class="bg-white shadow-lg">
-    <div class="max-w-6xl mx-auto px-4">
+    <div class="mx-auto px-4">
         <div class="flex justify-between items-center h-16">
             <!-- Logo -->
             <a href="/timetracker-php" class="text-2xl font-bold text-blue-600">

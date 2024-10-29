@@ -1,5 +1,3 @@
-<?php ob_start(); ?>
-
 <?php
 // Initialize variables with defaults if not set
 $time_stats = $time_stats ?? [
@@ -180,9 +178,3 @@ $recent_tasks = $recent_tasks ?? [];
         </div>
     </div>
 </div>
-
-
-<?php
-$content = ob_get_clean();
-require __DIR__ . '/../layouts/app.php';
-?>

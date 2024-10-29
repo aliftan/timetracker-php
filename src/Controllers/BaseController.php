@@ -3,32 +3,30 @@ class BaseController
 {
     protected function view($view, $data = [])
     {
-        ViewHelper::init($data);
-        
-        // Make data available to both view and layout
+        // Make data available
         foreach ($data as $key => $value) {
-            global $$key;
             $$key = $value;
         }
 
-        // Start output buffering
-        ob_start();
-
         try {
+            // Start output buffering
+            ob_start();
+
+            // Load the view
             $viewPath = __DIR__ . '/../../views/' . $view . '.php';
             if (!file_exists($viewPath)) {
                 throw new Exception("View file not found: {$view}");
             }
-
             require $viewPath;
 
+            // Get view content
             $content = ob_get_clean();
 
+            // Load the layout with the content
             $layoutPath = __DIR__ . '/../../views/layouts/app.php';
             if (!file_exists($layoutPath)) {
                 throw new Exception("Layout file not found");
             }
-
             require $layoutPath;
         } catch (Exception $e) {
             while (ob_get_level() > 0) {
