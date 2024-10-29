@@ -144,6 +144,21 @@ switch ($request) {
         $controller->current();
         break;
 
+    case 'profile':
+        $controller = new ProfileController();
+        $controller->index();
+        break;
+
+    case 'profile/update':
+        $controller = new ProfileController();
+        $controller->update();
+        break;
+
+    case 'profile/password':
+        $controller = new ProfileController();
+        $controller->password();
+        break;
+
     default:
         http_response_code(404);
         require __DIR__ . '/../views/404.php';
