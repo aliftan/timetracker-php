@@ -15,49 +15,52 @@ class TimerController extends BaseController
 
     public function start($taskId)
     {
-        // Validate request method
+        error_log("TimerController::start called for taskId: " . $taskId);
+
         if (!$this->validateMethod('POST')) {
             return;
         }
 
-        // Validate task existence and ownership
         $task = $this->validateTaskAccess($taskId);
         if (!$task) {
             return;
         }
 
-        // Start the timer
         if ($this->timer->startTimer($taskId, Auth::user()['id'])) {
-            $this->handleSuccessResponse(
-                'Timer started successfully',
-                $this->isAjaxRequest() ? null : "/projects/{$task['project_id']}/tasks"
-            );
+            Session::setFlash('success', 'Timer started...');
+            $this->json([
+                'success' => true,
+                'redirect' => "/timetracker-php/projects/{$task['project_id']}/tasks"
+            ]);
         } else {
-            $this->handleErrorResponse(
-                'Could not start timer',
-                "/projects/{$task['project_id']}/tasks"
-            );
+            Session::setFlash('error', 'Could not start timer');
+            $this->json([
+                'success' => false,
+                'redirect' => "/timetracker-php/projects/{$task['project_id']}/tasks"
+            ]);
         }
     }
 
     public function stop($timerId)
     {
-        // Validate request method
+        error_log("TimerController::stop called for timerId: " . $timerId);
+
         if (!$this->validateMethod('POST')) {
             return;
         }
 
-        // Stop the timer
         if ($this->timer->stopTimer($timerId)) {
-            $this->handleSuccessResponse(
-                'Timer stopped successfully',
-                $this->isAjaxRequest() ? null : ($_SERVER['HTTP_REFERER'] ?? '/dashboard')
-            );
+            Session::setFlash('success', 'Timer stopped successfully');
+            $this->json([
+                'success' => true,
+                'redirect' => $_SERVER['HTTP_REFERER'] ?? '/timetracker-php/dashboard'
+            ]);
         } else {
-            $this->handleErrorResponse(
-                'Could not stop timer',
-                '/dashboard'
-            );
+            Session::setFlash('error', 'Could not stop timer');
+            $this->json([
+                'success' => false,
+                'redirect' => $_SERVER['HTTP_REFERER'] ?? '/timetracker-php/dashboard'
+            ]);
         }
     }
 
